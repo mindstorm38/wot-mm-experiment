@@ -8,6 +8,7 @@ pub mod data;
 
 pub mod tank;
 pub mod matchmaker;
+pub mod matchmaker2;
 
 use matchmaker::Matchmaker;
 use tank::{TankRegistry, TankClass};
