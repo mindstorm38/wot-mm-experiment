@@ -10,7 +10,7 @@ pub mod tank;
 pub mod matchmaker;
 pub mod matchmaker2;
 
-use matchmaker::Matchmaker;
+use matchmaker2::{Matchmaker, Player};
 use tank::{TankRegistry, TankClass};
 
 
@@ -42,7 +42,7 @@ fn main() -> ExitCode {
         registry.register(&perf.name, perf.tier, tank_class, perf.battles);
     }
 
-    let battles_speedup = 500;
+    let battles_speedup = 1;
     let battles_per_second = registry.battles() / 30 / 24 / 3600;
     let battles_interval = Duration::from_secs_f32(1.0 / battles_per_second as f32) / battles_speedup;
 
@@ -54,21 +54,34 @@ fn main() -> ExitCode {
 
         scope.spawn(move || {
 
-            let normal_team_size = 15;
-            let normal_wait_duration = Duration::from_secs(30);
+            // let normal_team_size = 15;
+            // let normal_wait_duration = Duration::from_secs(30);
 
-            let mut match_count = 0usize;
-            let mut abnormal_team_size_count = 0usize;
-            let mut abnormal_wait_duration_count = 0usize;
+            // let mut match_count = 0usize;
+            // let mut abnormal_team_size_count = 0usize;
+            // let mut abnormal_wait_duration_count = 0usize;
 
             println!("== Running");
-            let mut matchmaker = Matchmaker::new(10);
+            let mut matchmaker = Matchmaker::new();
 
             loop {
                 
-                matchmaker.queue(rx.recv().unwrap());
+                if let Some(m) = matchmaker.queue(rx.recv().unwrap()) {
 
-                while let Some(m) = matchmaker.poll(2, normal_team_size) {
+                    println!(" = Found match ({}):", m.teams_size());
+                    for tank_index in 0..m.teams_size() {
+                        let left_player = m.player(0, tank_index);
+                        let right_player = m.player(1, tank_index);
+                        println!(" | {:<4}  {:<20} | {:>20}  {:>4} |", 
+                            tier_display(left_player.tank().tier()),
+                            left_player.tank().name(),
+                            right_player.tank().name(),
+                            tier_display(right_player.tank().tier()));
+                    }
+
+                }
+
+                /*while let Some(m) = matchmaker.poll(2, normal_team_size) {
 
                     match_count += 1;
 
@@ -111,7 +124,7 @@ fn main() -> ExitCode {
 
                     }
                     
-                }
+                }*/
 
             }
 
@@ -119,7 +132,7 @@ fn main() -> ExitCode {
 
         scope.spawn(move || {
             for tank in registry.pick_many_random() {
-                tx.send(tank).unwrap();
+                tx.send(Player::new(tank)).unwrap();
                 thread::sleep(battles_interval);
             }
         });
